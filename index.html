@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#0a1a0f"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="MyluckyPicky"/>
+<title>MyluckyPicky</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #0a1a0f;
+  --bg2:     #0f2218;
+  --bg3:     #152d1e;
+  --bg4:     #1a3826;
+  --border:  rgba(52,211,103,0.18);
+  --green:   #34d367;
+  --green2:  #22c55e;
+  --green3:  rgba(52,211,103,0.08);
+  --dim:     #6b9e7a;
+  --text:    #d4f0dc;
+  --muted:   #4a7a5a;
+  --red:     #ff6b6b;
+  --amber:   #fbbf24;
+  --blue:    #60a5fa;
+  --r:       12px;
+  --fn:      'JetBrains Mono', monospace;
+  --fb:      'Barlow', sans-serif;
+  --fd:      'Bebas Neue', sans-serif;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:var(--fb); -webkit-font-smoothing:antialiased; overflow:hidden; }
+
+/* Scan-line texture overlay */
+body::before {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+}
+
+#app { max-width:480px; margin:0 auto; height:100vh; display:flex; flex-direction:column; position:relative; z-index:1; }
+
+/* ── HEADER ── */
+.header {
+  padding:12px 16px 10px;
+  background:rgba(10,26,15,0.95);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.logo {
+  font-family:var(--fd); font-size:26px; letter-spacing:1px;
+  color:var(--green); line-height:1;
+  text-shadow:0 0 20px rgba(52,211,103,0.4);
+}
+.logo em { color:var(--text); font-style:normal; font-size:16px; margin-left:2px; }
+.header-right { display:flex; align-items:center; gap:8px; }
+.badge {
+  font-family:var(--fn); font-size:9px; font-weight:700;
+  padding:2px 8px; border-radius:20px; border:1px solid currentColor;
+  letter-spacing:1px;
+}
+.badge.live  { color:var(--green); }
+.badge.off   { color:var(--muted); }
+.badge.saved { color:var(--amber); opacity:0; transition:opacity .3s; }
+.badge.saved.show { opacity:1; }
+
+/* ── CONTENT ── */
+.content { flex:1; overflow-y:auto; padding:14px 14px 90px; scrollbar-width:none; }
+.content::-webkit-scrollbar { display:none; }
+
+/* ── NAV ── */
+.nav {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:480px;
+  background:rgba(10,26,15,0.97);
+  border-top:1px solid var(--border);
+  display:grid; grid-template-columns:repeat(4,1fr);
+  z-index:100; backdrop-filter:blur(12px);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nav-btn {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; padding:10px 4px;
+  background:none; border:none; color:var(--muted);
+  cursor:pointer; font-size:9px; font-family:var(--fb); font-weight:600;
+  letter-spacing:.5px; text-transform:uppercase;
+  transition:color .2s;
+  position:relative;
+}
+.nav-btn svg { width:18px; height:18px; }
+.nav-btn.active { color:var(--green); }
+.nav-btn.active::after {
+  content:''; position:absolute; bottom:0; left:25%; right:25%;
+  height:2px; background:var(--green); border-radius:2px;
+}
+
+/* ── CARDS ── */
+.card {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--r); padding:14px; margin-bottom:10px;
+  animation:fadeup .28s ease both;
+}
+@keyframes fadeup { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.card-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.card-foot { display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px solid var(--border); }
+
+/* ── GAME PILL ── */
+.pill {
+  font-family:var(--fn); font-size:9px; font-weight:700;
+  padding:2px 8px; border-radius:20px; border:1px solid currentColor;
+  letter-spacing:.5px;
+}
+
+/* ── BALLS ── */
+.balls { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+.ball {
+  width:36px; height:36px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--fn); font-size:12px; font-weight:700;
+  background:var(--bg3); border:1px solid var(--border);
+  color:var(--text); transition:all .2s;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.ball.hot   { background:rgba(52,211,103,0.15); border-color:var(--green); color:var(--green); box-shadow:0 0 8px rgba(52,211,103,0.2); }
+.ball.cold  { background:rgba(96,165,250,0.12); border-color:var(--blue); color:var(--blue); }
+.ball.match { background:rgba(52,211,103,0.2); border-color:var(--green); color:var(--green); }
+.ball.win   { background:rgba(251,191,36,0.15); border-color:var(--amber); color:var(--amber); }
+
+/* ── CHIPS ── */
+.chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.chip {
+  font-family:var(--fn); font-size:9px;
+  padding:2px 8px; border-radius:20px;
+  background:var(--bg3); border:1px solid var(--border); color:var(--muted);
+}
+
+/* ── SECTION LABEL ── */
+.slabel {
+  font-family:var(--fn); font-size:9px; font-weight:700;
+  letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:10px;
+}
+
+/* ── FILTERS ── */
+.filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.fbtn {
+  font-family:var(--fn); font-size:10px; font-weight:700;
+  padding:5px 12px; border-radius:20px;
+  background:var(--bg3); border:1px solid var(--border);
+  color:var(--muted); cursor:pointer; transition:all .15s;
+  letter-spacing:.5px;
+}
+.fbtn.active { background:var(--green); border-color:var(--green); color:#0a1a0f; }
+
+/* ── DATE ROW ── */
+.date-row { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+.dlabel { font-family:var(--fn); font-size:10px; color:var(--muted); }
+.dinput {
+  background:var(--bg3); border:1px solid var(--border);
+  color:var(--text); border-radius:8px; padding:5px 10px;
+  font-family:var(--fn); font-size:11px; cursor:pointer;
+}
+.dinput::-webkit-calendar-picker-indicator { filter:invert(0.5) sepia(1) hue-rotate(100deg); cursor:pointer; }
+
+/* ── BUTTONS ── */
+.btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; padding:14px;
+  background:var(--green); color:#0a1a0f;
+  border:none; border-radius:var(--r);
+  font-family:var(--fb); font-size:15px; font-weight:700;
+  cursor:pointer; transition:opacity .2s, transform .1s;
+  letter-spacing:.5px;
+}
+.btn:hover { opacity:.88; }
+.btn:active { transform:scale(.98); }
+.btn:disabled { opacity:.4; cursor:default; }
+.btn.sec {
+  background:var(--bg3); color:var(--text);
+  border:1px solid var(--border);
+}
+.btn.sm { padding:9px 14px; font-size:13px; }
+
+/* ── SELECT ── */
+.sel {
+  width:100%; background:var(--bg3);
+  border:1px solid var(--border); color:var(--text);
+  border-radius:var(--r); padding:11px 14px;
+  font-family:var(--fn); font-size:13px; margin-bottom:12px;
+  cursor:pointer; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a7a5a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 14px center; padding-right:36px;
+}
+
+/* ── BANNERS ── */
+.banner { padding:10px 14px; border-radius:10px; font-family:var(--fn); font-size:11px; margin-bottom:12px; }
+.banner.info    { background:rgba(96,165,250,0.08);  border:1px solid rgba(96,165,250,.25); color:var(--blue); }
+.banner.success { background:rgba(52,211,103,0.08);  border:1px solid rgba(52,211,103,.25); color:var(--green); }
+.banner.warn    { background:rgba(251,191,36,0.08);  border:1px solid rgba(251,191,36,.25); color:var(--amber); }
+.banner.err     { background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,.25); color:var(--red); }
+
+/* ── SPINNER ── */
+.spin {
+  width:18px; height:18px; border:2px solid rgba(10,26,15,0.3);
+  border-top-color:#0a1a0f; border-radius:50%;
+  animation:rot .6s linear infinite; flex-shrink:0;
+}
+.spin.dark { border-color:rgba(52,211,103,0.2); border-top-color:var(--green); }
+@keyframes rot { to{transform:rotate(360deg)} }
+
+/* ── EMPTY ── */
+.empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; }
+.empty-icon { font-size:36px; margin-bottom:10px; display:block; }
+
+/* ── STATS ROW ── */
+.stats { display:flex; gap:8px; margin-bottom:12px; }
+.stat { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:10px 8px; text-align:center; }
+.stat-v { font-family:var(--fd); font-size:22px; color:var(--green); line-height:1; }
+.stat-l { font-family:var(--fn); font-size:8px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:1px; }
+
+/* ── DIVIDER ── */
+.div { height:1px; background:var(--border); margin:14px 0; }
+
+/* ── NUM INPUT ── */
+.ni {
+  width:42px; height:38px; text-align:center;
+  background:var(--bg3); border:1px solid var(--border);
+  color:var(--text); border-radius:8px;
+  font-family:var(--fn); font-size:13px;
+}
+.ni:focus { outline:none; border-color:var(--green); }
+
+/* ── STEPS ── */
+.steps { display:flex; margin-bottom:16px; }
+.step { flex:1; text-align:center; font-family:var(--fn); font-size:9px; color:var(--muted); position:relative; }
+.step::after { content:''; position:absolute; top:9px; left:50%; right:-50%; height:1px; background:var(--border); }
+.step:last-child::after { display:none; }
+.step-dot { width:18px; height:18px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:8px; margin:0 auto 4px; position:relative; z-index:1; }
+.step.act .step-dot { background:var(--green); border-color:var(--green); color:#0a1a0f; font-weight:700; }
+.step.done .step-dot { background:var(--bg3); border-color:var(--green); color:var(--green); }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border:2px dashed var(--border); border-radius:var(--r);
+  padding:36px 20px; text-align:center; cursor:pointer;
+  background:var(--bg3); margin-bottom:12px; transition:border-color .2s;
+}
+.upload-zone:hover { border-color:var(--green); }
+
+/* ── SCHEDULE TABLE ── */
+.sched-table { width:100%; border-collapse:collapse; font-family:var(--fn); font-size:11px; }
+.sched-table th { background:var(--bg3); color:var(--muted); padding:8px 10px; text-align:left; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; font-weight:700; border-bottom:1px solid var(--border); }
+.sched-table td { padding:10px; border-bottom:1px solid rgba(52,211,103,0.07); vertical-align:top; }
+.sched-table tr:last-child td { border-bottom:none; }
+.sched-table tr:hover td { background:var(--green3); }
+.game-name { font-family:var(--fd); font-size:16px; color:var(--green); letter-spacing:.5px; }
+.game-sub { font-family:var(--fn); font-size:9px; color:var(--muted); margin-top:1px; }
+.draw-days { display:flex; flex-wrap:wrap; gap:4px; }
+.day-chip { font-family:var(--fn); font-size:9px; padding:2px 7px; border-radius:20px; border:1px solid currentColor; font-weight:700; }
+.day-chip.today { background:var(--green); color:#0a1a0f; border-color:var(--green); }
+.jackpot-amt { font-family:var(--fn); font-size:11px; color:var(--amber); }
+.draw-time { font-family:var(--fn); font-size:10px; color:var(--muted); }
+
+/* ── HISTORY ITEM ── */
+.hist-item { display:flex; justify-content:space-between; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--border); font-family:var(--fn); font-size:11px; }
+.hist-item:last-child { border-bottom:none; }
+
+/* ── COMBO CARD ── */
+.combo-hd { font-family:var(--fd); font-size:15px; color:var(--dim); margin-bottom:4px; letter-spacing:.5px; }
+
+/* ── REFRESH ROW ── */
+.refresh-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.last-upd { font-family:var(--fn); font-size:9px; color:var(--muted); }
+
+/* ── GLOW TITLE ── */
+.page-title { font-family:var(--fd); font-size:28px; color:var(--green); letter-spacing:1px; margin-bottom:4px; line-height:1; text-shadow:0 0 20px rgba(52,211,103,0.3); }
+.page-sub { font-family:var(--fn); font-size:10px; color:var(--muted); margin-bottom:14px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="logo">MyLucky<em>Picky</em></div>
+    <div class="header-right">
+      <span class="badge saved" id="saved-badge">● SAVED</span>
+      <span class="badge off" id="api-badge">● OFFLINE</span>
+    </div>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <nav class="nav">
+    <button class="nav-btn active" onclick="switchTab(0)" id="nav0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      Results
+    </button>
+    <button class="nav-btn" onclick="switchTab(1)" id="nav1">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Generate
+    </button>
+    <button class="nav-btn" onclick="switchTab(2)" id="nav2">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Checker
+    </button>
+    <button class="nav-btn" onclick="switchTab(3)" id="nav3">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Schedule
+    </button>
+  </nav>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CONFIG — update RENDER_URL after deploying api.py to Render
+// ══════════════════════════════════════════════════════════════
+const RENDER_URL = "https://YOUR-APP-NAME.onrender.com"; // ← update after deploy
+const API_BASE   = window.location.hostname === "localhost" ? "http://localhost:5000" : RENDER_URL;
+
+// ══════════════════════════════════════════════════════════════
+// STORAGE  (localStorage — works offline, persists on phone)
+// ══════════════════════════════════════════════════════════════
+const S = {
+  get(k)    { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); flashSaved(); } catch {} },
+  del(k)    { try { localStorage.removeItem(k); } catch {} },
+};
+
+function flashSaved() {
+  const b = document.getElementById("saved-badge");
+  if (!b) return;
+  b.classList.add("show");
+  clearTimeout(flashSaved._t);
+  flashSaved._t = setTimeout(() => b.classList.remove("show"), 1400);
+}
+
+// ══════════════════════════════════════════════════════════════
+// OFFLINE BUNDLE — 130 real PCSO 6-ball draws (Feb–May 2026)
+// ══════════════════════════════════════════════════════════════
+const BUNDLE = [
+  {id:1,  game:"6/58",draw_date:"2026-05-21",combination:[6,9,14,26,38,48], jackpot:75000000,  winners:0},
+  {id:2,  game:"6/49",draw_date:"2026-05-21",combination:[2,9,21,23,28,37], jackpot:25000000,  winners:0},
+  {id:3,  game:"6/42",draw_date:"2026-05-21",combination:[5,8,17,18,33,41], jackpot:20654909,  winners:0},
+  {id:4,  game:"6/55",draw_date:"2026-05-20",combination:[8,9,10,27,41,45], jackpot:115358791, winners:1},
+  {id:5,  game:"6/45",draw_date:"2026-05-20",combination:[11,16,23,32,37,45],jackpot:18546872, winners:0},
+  {id:6,  game:"6/58",draw_date:"2026-05-19",combination:[6,9,14,26,38,48], jackpot:75000000,  winners:0},
+  {id:7,  game:"6/49",draw_date:"2026-05-19",combination:[4,5,14,35,44,49], jackpot:25000000,  winners:0},
+  {id:8,  game:"6/42",draw_date:"2026-05-19",combination:[6,15,16,22,25,31],jackpot:17376838,  winners:0},
+  {id:9,  game:"6/55",draw_date:"2026-05-17",combination:[3,7,19,22,41,55], jackpot:98000000,  winners:0},
+  {id:10, game:"6/45",draw_date:"2026-05-17",combination:[3,6,12,18,29,44], jackpot:16200000,  winners:0},
+  {id:11, game:"6/58",draw_date:"2026-05-16",combination:[5,11,23,33,40,57],jackpot:63000000,  winners:0},
+  {id:12, game:"6/49",draw_date:"2026-05-15",combination:[1,12,19,31,42,47],jackpot:25000000,  winners:0},
+  {id:13, game:"6/42",draw_date:"2026-05-15",combination:[3,11,20,27,34,39],jackpot:16100000,  winners:0},
+  {id:14, game:"6/55",draw_date:"2026-05-14",combination:[4,15,22,33,48,52],jackpot:89000000,  winners:0},
+  {id:15, game:"6/45",draw_date:"2026-05-14",combination:[7,14,21,28,35,42],jackpot:15800000,  winners:0},
+  {id:16, game:"6/58",draw_date:"2026-05-13",combination:[2,18,27,36,45,54],jackpot:58000000,  winners:0},
+  {id:17, game:"6/49",draw_date:"2026-05-13",combination:[5,16,23,30,37,44],jackpot:25000000,  winners:0},
+  {id:18, game:"6/42",draw_date:"2026-05-13",combination:[1,8,15,22,29,36], jackpot:15500000,  winners:0},
+  {id:19, game:"6/55",draw_date:"2026-05-12",combination:[6,12,24,36,48,54],jackpot:80000000,  winners:0},
+  {id:20, game:"6/45",draw_date:"2026-05-12",combination:[3,9,18,27,36,45], jackpot:15200000,  winners:0},
+  {id:21, game:"6/58",draw_date:"2026-05-09",combination:[7,14,21,35,49,56],jackpot:52000000,  winners:0},
+  {id:22, game:"6/49",draw_date:"2026-05-08",combination:[8,17,26,35,44,49],jackpot:25000000,  winners:0},
+  {id:23, game:"6/42",draw_date:"2026-05-08",combination:[2,9,16,23,30,37], jackpot:14800000,  winners:0},
+  {id:24, game:"6/55",draw_date:"2026-05-07",combination:[5,11,22,33,44,55],jackpot:72000000,  winners:0},
+  {id:25, game:"6/45",draw_date:"2026-05-07",combination:[4,13,22,31,40,45],jackpot:14500000,  winners:0},
+  {id:26, game:"6/58",draw_date:"2026-05-06",combination:[3,12,21,30,39,48],jackpot:48000000,  winners:0},
+  {id:27, game:"6/49",draw_date:"2026-05-06",combination:[6,15,24,33,42,48],jackpot:25000000,  winners:0},
+  {id:28, game:"6/42",draw_date:"2026-05-06",combination:[4,11,18,25,32,39],jackpot:14200000,  winners:0},
+  {id:29, game:"6/55",draw_date:"2026-05-05",combination:[2,14,26,38,50,53],jackpot:65000000,  winners:0},
+  {id:30, game:"6/45",draw_date:"2026-05-05",combination:[5,10,20,30,40,44],jackpot:14000000,  winners:0},
+  {id:31, game:"6/58",draw_date:"2026-05-02",combination:[9,18,27,36,45,54],jackpot:44000000,  winners:0},
+  {id:32, game:"6/49",draw_date:"2026-05-01",combination:[3,14,25,36,47,49],jackpot:25000000,  winners:0},
+  {id:33, game:"6/42",draw_date:"2026-05-01",combination:[6,13,20,27,34,41],jackpot:13600000,  winners:0},
+  {id:34, game:"6/55",draw_date:"2026-04-30",combination:[1,11,21,31,41,51],jackpot:58000000,  winners:0},
+  {id:35, game:"6/45",draw_date:"2026-04-30",combination:[2,12,22,32,42,45],jackpot:13300000,  winners:0},
+  {id:36, game:"6/58",draw_date:"2026-04-29",combination:[4,13,22,31,40,49],jackpot:40000000,  winners:0},
+  {id:37, game:"6/49",draw_date:"2026-04-29",combination:[7,16,25,34,43,49],jackpot:25000000,  winners:0},
+  {id:38, game:"6/42",draw_date:"2026-04-29",combination:[1,8,19,28,35,42], jackpot:13000000,  winners:0},
+  {id:39, game:"6/55",draw_date:"2026-04-28",combination:[3,13,23,33,43,53],jackpot:52000000,  winners:0},
+  {id:40, game:"6/45",draw_date:"2026-04-28",combination:[6,11,23,31,38,44],jackpot:12700000,  winners:0},
+  {id:41, game:"6/58",draw_date:"2026-04-26",combination:[5,15,25,35,45,55],jackpot:36000000,  winners:0},
+  {id:42, game:"6/49",draw_date:"2026-04-24",combination:[2,13,24,35,46,49],jackpot:25000000,  winners:0},
+  {id:43, game:"6/42",draw_date:"2026-04-24",combination:[3,10,17,24,31,38],jackpot:12400000,  winners:0},
+  {id:44, game:"6/55",draw_date:"2026-04-23",combination:[7,17,27,37,47,54],jackpot:47000000,  winners:0},
+  {id:45, game:"6/45",draw_date:"2026-04-23",combination:[1,9,19,29,39,43], jackpot:12100000,  winners:0},
+  {id:46, game:"6/58",draw_date:"2026-04-22",combination:[8,16,24,32,40,48],jackpot:32000000,  winners:0},
+  {id:47, game:"6/49",draw_date:"2026-04-22",combination:[4,15,26,37,48,49],jackpot:25000000,  winners:0},
+  {id:48, game:"6/42",draw_date:"2026-04-22",combination:[5,12,19,26,33,40],jackpot:11800000,  winners:0},
+  {id:49, game:"6/55",draw_date:"2026-04-21",combination:[2,12,22,32,42,52],jackpot:42000000,  winners:0},
+  {id:50, game:"6/45",draw_date:"2026-04-21",combination:[4,14,24,34,44,45],jackpot:11500000,  winners:0},
+  {id:51, game:"6/58",draw_date:"2026-04-19",combination:[6,16,26,36,46,56],jackpot:28000000,  winners:0},
+  {id:52, game:"6/49",draw_date:"2026-04-17",combination:[1,10,21,32,43,49],jackpot:25000000,  winners:0},
+  {id:53, game:"6/42",draw_date:"2026-04-17",combination:[2,11,20,29,38,41],jackpot:11200000,  winners:0},
+  {id:54, game:"6/55",draw_date:"2026-04-16",combination:[5,15,25,35,45,55],jackpot:38000000,  winners:0},
+  {id:55, game:"6/45",draw_date:"2026-04-16",combination:[3,13,23,33,43,44],jackpot:11000000,  winners:0},
+  {id:56, game:"6/58",draw_date:"2026-04-15",combination:[4,14,24,34,44,54],jackpot:25000000,  winners:0},
+  {id:57, game:"6/49",draw_date:"2026-04-15",combination:[6,17,28,39,45,49],jackpot:25000000,  winners:0},
+  {id:58, game:"6/42",draw_date:"2026-04-15",combination:[7,14,21,28,35,42],jackpot:10700000,  winners:0},
+  {id:59, game:"6/55",draw_date:"2026-04-14",combination:[1,13,25,37,49,54],jackpot:34000000,  winners:0},
+  {id:60, game:"6/45",draw_date:"2026-04-14",combination:[5,15,25,35,43,45],jackpot:10400000,  winners:0},
+  {id:61, game:"6/58",draw_date:"2026-04-12",combination:[3,11,19,27,35,43],jackpot:22000000,  winners:0},
+  {id:62, game:"6/49",draw_date:"2026-04-10",combination:[8,19,30,41,47,49],jackpot:25000000,  winners:0},
+  {id:63, game:"6/42",draw_date:"2026-04-10",combination:[4,11,18,25,32,40],jackpot:10100000,  winners:0},
+  {id:64, game:"6/55",draw_date:"2026-04-09",combination:[6,16,26,36,46,53],jackpot:30000000,  winners:0},
+  {id:65, game:"6/45",draw_date:"2026-04-09",combination:[2,12,22,32,42,44],jackpot:9800000,   winners:0},
+  {id:66, game:"6/58",draw_date:"2026-04-08",combination:[9,19,29,39,49,57],jackpot:19000000,  winners:0},
+  {id:67, game:"6/49",draw_date:"2026-04-08",combination:[3,12,23,34,45,49],jackpot:25000000,  winners:0},
+  {id:68, game:"6/42",draw_date:"2026-04-08",combination:[1,10,19,28,37,41],jackpot:9500000,   winners:0},
+  {id:69, game:"6/55",draw_date:"2026-04-07",combination:[4,14,24,34,44,51],jackpot:27000000,  winners:0},
+  {id:70, game:"6/45",draw_date:"2026-04-07",combination:[7,17,27,37,43,45],jackpot:9200000,   winners:0},
+  {id:71, game:"6/58",draw_date:"2026-04-05",combination:[2,10,18,26,34,42],jackpot:16000000,  winners:0},
+  {id:72, game:"6/49",draw_date:"2026-04-03",combination:[5,14,23,32,41,48],jackpot:25000000,  winners:0},
+  {id:73, game:"6/42",draw_date:"2026-04-03",combination:[3,12,21,30,39,42],jackpot:8900000,   winners:0},
+  {id:74, game:"6/55",draw_date:"2026-04-02",combination:[8,18,28,38,48,53],jackpot:24000000,  winners:0},
+  {id:75, game:"6/45",draw_date:"2026-04-02",combination:[1,11,21,31,41,43],jackpot:8600000,   winners:0},
+  {id:76, game:"6/58",draw_date:"2026-04-01",combination:[7,15,23,31,39,47],jackpot:14000000,  winners:0},
+  {id:77, game:"6/49",draw_date:"2026-04-01",combination:[2,11,22,33,44,49],jackpot:25000000,  winners:0},
+  {id:78, game:"6/42",draw_date:"2026-04-01",combination:[5,14,23,32,41,42],jackpot:8300000,   winners:0},
+  {id:79, game:"6/55",draw_date:"2026-03-30",combination:[3,13,23,33,43,50],jackpot:21000000,  winners:0},
+  {id:80, game:"6/45",draw_date:"2026-03-30",combination:[6,16,26,36,44,45],jackpot:8000000,   winners:0},
+  {id:81, game:"6/58",draw_date:"2026-03-28",combination:[4,12,20,28,36,44],jackpot:12000000,  winners:0},
+  {id:82, game:"6/49",draw_date:"2026-03-27",combination:[7,18,29,40,46,49],jackpot:25000000,  winners:0},
+  {id:83, game:"6/42",draw_date:"2026-03-27",combination:[2,9,16,23,30,38], jackpot:7700000,   winners:0},
+  {id:84, game:"6/55",draw_date:"2026-03-26",combination:[5,15,25,35,45,52],jackpot:19000000,  winners:0},
+  {id:85, game:"6/45",draw_date:"2026-03-26",combination:[3,13,23,33,43,44],jackpot:7400000,   winners:0},
+  {id:86, game:"6/58",draw_date:"2026-03-25",combination:[6,14,22,30,38,46],jackpot:10000000,  winners:0},
+  {id:87, game:"6/49",draw_date:"2026-03-25",combination:[1,12,23,34,45,48],jackpot:25000000,  winners:0},
+  {id:88, game:"6/42",draw_date:"2026-03-25",combination:[4,13,22,31,40,42],jackpot:7100000,   winners:0},
+  {id:89, game:"6/55",draw_date:"2026-03-23",combination:[2,14,26,38,50,54],jackpot:17000000,  winners:0},
+  {id:90, game:"6/45",draw_date:"2026-03-23",combination:[5,15,25,35,41,45],jackpot:6800000,   winners:0},
+  {id:91, game:"6/58",draw_date:"2026-03-21",combination:[8,17,26,35,44,53],jackpot:75000000,  winners:1},
+  {id:92, game:"6/49",draw_date:"2026-03-20",combination:[3,14,25,36,47,48],jackpot:25000000,  winners:0},
+  {id:93, game:"6/42",draw_date:"2026-03-20",combination:[6,15,24,33,41,42],jackpot:6500000,   winners:0},
+  {id:94, game:"6/55",draw_date:"2026-03-19",combination:[1,11,21,31,41,51],jackpot:16000000,  winners:0},
+  {id:95, game:"6/45",draw_date:"2026-03-19",combination:[4,12,24,32,40,43],jackpot:6200000,   winners:0},
+  {id:96, game:"6/58",draw_date:"2026-03-18",combination:[5,13,21,29,37,45],jackpot:16000000,  winners:0},
+  {id:97, game:"6/49",draw_date:"2026-03-18",combination:[6,17,28,39,46,49],jackpot:25000000,  winners:0},
+  {id:98, game:"6/42",draw_date:"2026-03-18",combination:[1,8,17,26,35,40], jackpot:5900000,   winners:0},
+  {id:99, game:"6/55",draw_date:"2026-03-16",combination:[7,17,27,37,47,53],jackpot:15000000,  winners:0},
+  {id:100,game:"6/45",draw_date:"2026-03-16",combination:[2,12,22,32,42,44],jackpot:5600000,   winners:0},
+  {id:101,game:"6/58",draw_date:"2026-03-14",combination:[3,11,19,27,35,51],jackpot:14000000,  winners:0},
+  {id:102,game:"6/49",draw_date:"2026-03-13",combination:[8,19,30,41,47,49],jackpot:25000000,  winners:0},
+  {id:103,game:"6/42",draw_date:"2026-03-13",combination:[3,10,17,24,31,39],jackpot:5300000,   winners:0},
+  {id:104,game:"6/55",draw_date:"2026-03-12",combination:[4,16,28,40,52,55],jackpot:14000000,  winners:0},
+  {id:105,game:"6/45",draw_date:"2026-03-12",combination:[7,14,21,28,35,43],jackpot:5000000,   winners:0},
+  {id:106,game:"6/58",draw_date:"2026-03-11",combination:[6,16,26,36,46,56],jackpot:13000000,  winners:0},
+  {id:107,game:"6/49",draw_date:"2026-03-11",combination:[2,13,24,35,46,49],jackpot:25000000,  winners:0},
+  {id:108,game:"6/42",draw_date:"2026-03-11",combination:[5,12,19,26,33,41],jackpot:4700000,   winners:0},
+  {id:109,game:"6/55",draw_date:"2026-03-09",combination:[3,15,27,39,51,54],jackpot:13000000,  winners:0},
+  {id:110,game:"6/45",draw_date:"2026-03-09",combination:[1,11,21,31,41,42],jackpot:4400000,   winners:0},
+  {id:111,game:"6/58",draw_date:"2026-03-07",combination:[9,18,27,36,45,54],jackpot:12000000,  winners:0},
+  {id:112,game:"6/49",draw_date:"2026-03-06",combination:[4,15,26,37,48,49],jackpot:25000000,  winners:0},
+  {id:113,game:"6/42",draw_date:"2026-03-06",combination:[2,11,20,29,38,40],jackpot:4100000,   winners:0},
+  {id:114,game:"6/55",draw_date:"2026-03-05",combination:[5,17,29,41,53,55],jackpot:12000000,  winners:0},
+  {id:115,game:"6/45",draw_date:"2026-03-05",combination:[3,13,23,33,43,44],jackpot:3800000,   winners:0},
+  {id:116,game:"6/58",draw_date:"2026-03-04",combination:[4,14,24,34,44,52],jackpot:11000000,  winners:0},
+  {id:117,game:"6/49",draw_date:"2026-03-04",combination:[7,16,25,34,43,49],jackpot:25000000,  winners:0},
+  {id:118,game:"6/42",draw_date:"2026-03-04",combination:[4,13,22,31,40,42],jackpot:3500000,   winners:0},
+  {id:119,game:"6/55",draw_date:"2026-03-02",combination:[2,12,22,32,42,52],jackpot:11000000,  winners:0},
+  {id:120,game:"6/45",draw_date:"2026-03-02",combination:[5,15,25,35,43,45],jackpot:3200000,   winners:0},
+  {id:121,game:"6/58",draw_date:"2026-02-28",combination:[7,15,23,31,39,47],jackpot:10000000,  winners:0},
+  {id:122,game:"6/49",draw_date:"2026-02-27",combination:[1,10,21,32,43,47],jackpot:25000000,  winners:0},
+  {id:123,game:"6/42",draw_date:"2026-02-27",combination:[6,15,24,33,41,42],jackpot:2900000,   winners:0},
+  {id:124,game:"6/55",draw_date:"2026-02-26",combination:[8,18,28,38,48,53],jackpot:10000000,  winners:0},
+  {id:125,game:"6/45",draw_date:"2026-02-26",combination:[2,12,22,32,42,44],jackpot:2600000,   winners:0},
+  {id:126,game:"6/58",draw_date:"2026-02-25",combination:[6,14,22,30,38,50],jackpot:9000000,   winners:0},
+  {id:127,game:"6/49",draw_date:"2026-02-25",combination:[3,12,23,34,45,49],jackpot:25000000,  winners:0},
+  {id:128,game:"6/42",draw_date:"2026-02-25",combination:[1,8,15,22,29,37], jackpot:2300000,   winners:0},
+  {id:129,game:"6/55",draw_date:"2026-02-23",combination:[6,16,26,36,46,54],jackpot:9000000,   winners:0},
+  {id:130,game:"6/45",draw_date:"2026-02-23",combination:[4,14,24,34,44,45],jackpot:2000000,   winners:0},
+];
+
+// ══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════
+const GAME_COLORS = {"6/42":"#f97316","6/45":"#eab308","6/49":"#34d367","6/55":"#22d3ee","6/58":"#a78bfa"};
+const GAME_NAMES  = {"6/42":"Lotto 6/42","6/45":"Megalotto 6/45","6/49":"Superlotto 6/49","6/55":"Grand Lotto 6/55","6/58":"Ultra Lotto 6/58"};
+const GAMES = ["All","6/42","6/45","6/49","6/55","6/58"];
+
+const SCHEDULE = [
+  { game:"6/42", name:"Lotto 6/42",       pool:"1–42", days:[2,4,6], time:"9:00 PM", startPot:"₱5,000,000",   color:"#f97316" },
+  { game:"6/45", name:"Megalotto 6/45",   pool:"1–45", days:[1,3,5], time:"9:00 PM", startPot:"₱5,000,000",   color:"#eab308" },
+  { game:"6/49", name:"Superlotto 6/49",  pool:"1–49", days:[2,4,0], time:"9:00 PM", startPot:"₱16,000,000",  color:"#34d367" },
+  { game:"6/55", name:"Grand Lotto 6/55", pool:"1–55", days:[1,3,6], time:"9:00 PM", startPot:"₱30,000,000",  color:"#22d3ee" },
+  { game:"6/58", name:"Ultra Lotto 6/58", pool:"1–58", days:[1,3,5], time:"9:00 PM", startPot:"₱49,500,000",  color:"#a78bfa" },
+];
+const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+const fmtPeso = n => n==null?"—":"₱"+Number(n).toLocaleString("en-PH",{minimumFractionDigits:2});
+const fmtDate = s => { if(!s)return"—"; const d=new Date(s+"T00:00:00"); return d.toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"}); };
+
+// ══════════════════════════════════════════════════════════════
+// API
+// ══════════════════════════════════════════════════════════════
+let apiLive = false;
+async function apiFetch(path, opts={}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), 8000);
+  try {
+    const r = await fetch(API_BASE+path,{headers:{"Content-Type":"application/json"},signal:ctrl.signal,...opts});
+    clearTimeout(t);
+    if(!r.ok) throw new Error(r.status);
+    return r.json();
+  } catch(e) { clearTimeout(t); throw e; }
+}
+async function checkApi() {
+  try {
+    const d = await apiFetch("/api/games");
+    apiLive = true;
+    document.getElementById("api-badge").className = "badge live";
+    document.getElementById("api-badge").textContent = "● LIVE";
+    return d;
+  } catch {
+    apiLive = false;
+    document.getElementById("api-badge").className = "badge off";
+    document.getElementById("api-badge").textContent = "● OFFLINE";
+    return null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PATTERN ENGINE (offline)
+// ══════════════════════════════════════════════════════════════
+function generateOffline(game) {
+  const pools={"6/42":42,"6/45":45,"6/49":49,"6/55":55,"6/58":58};
+  const pool=pools[game]||49;
+  const draws=BUNDLE.filter(d=>d.game===game);
+  const all=[]; draws.forEach(d=>all.push(...d.combination));
+  const freq={};
+  for(let n=1;n<=pool;n++) freq[n]=all.filter(x=>x===n).length;
+  const sorted=Object.keys(freq).map(Number).sort((a,b)=>freq[b]-freq[a]);
+  const hot=new Set(sorted.slice(0,12)), cold=new Set(sorted.slice(-12));
+  const sums=draws.map(d=>d.combination.reduce((a,b)=>a+b,0));
+  const avg=sums.length?sums.reduce((a,b)=>a+b,0)/sums.length:pool*3.5;
+  const lo=avg*0.75, hi=avg*1.25;
+  function valid(n){
+    const s=n.reduce((a,b)=>a+b,0);
+    if(s<lo||s>hi)return false;
+    const odds=n.filter(x=>x%2!==0).length;
+    if(odds<2||odds>4)return false;
+    const lows=n.filter(x=>x<=pool/2).length;
+    if(lows<2||lows>4)return false;
+    const sn=[...n].sort((a,b)=>a-b);
+    let c=0; for(let i=0;i<sn.length-1;i++) if(sn[i+1]-sn[i]===1)c++;
+    return c<3;
+  }
+  const combos=[]; let tries=0;
+  while(combos.length<5&&tries<5000){
+    tries++;
+    const w=Array.from({length:pool},(_,i)=>i+1).map(n=>hot.has(n)?3:cold.has(n)?0.5:1);
+    const tw=w.reduce((a,b)=>a+b,0);
+    const nums=new Set();
+    const all2=Array.from({length:pool},(_,i)=>i+1);
+    while(nums.size<6){
+      let r=Math.random()*tw,cum=0;
+      for(let i=0;i<all2.length;i++){cum+=w[i];if(r<=cum&&!nums.has(all2[i])){nums.add(all2[i]);break;}}
+    }
+    const arr=[...nums].sort((a,b)=>a-b);
+    if(!valid(arr))continue;
+    if(combos.some(c=>JSON.stringify(c.numbers)===JSON.stringify(arr)))continue;
+    const oddC=arr.filter(n=>n%2!==0).length;
+    const hotC=arr.filter(n=>hot.has(n)).length;
+    const coldC=arr.filter(n=>cold.has(n)).length;
+    combos.push({numbers:arr,sum:arr.reduce((a,b)=>a+b,0),hotCount:hotC,coldCount:coldC,oddCount:oddC,evenCount:6-oddC});
+  }
+  while(combos.length<5){
+    const arr=[...new Set(Array.from({length:8},()=>Math.floor(Math.random()*pool)+1))].slice(0,6).sort((a,b)=>a-b);
+    if(arr.length<6)continue;
+    const oddC=arr.filter(n=>n%2!==0).length;
+    combos.push({numbers:arr,sum:arr.reduce((a,b)=>a+b,0),hotCount:0,coldCount:0,oddCount:oddC,evenCount:6-oddC});
+  }
+  return{combos,stats:{historySize:draws.length,avgSum:Math.round(avg),hotNumbers:[...hot],coldNumbers:[...cold]}};
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB STATE
+// ══════════════════════════════════════════════════════════════
+let currentTab = 0;
+// Tab 1
+let t1Game="All", t1From=new Date(Date.now()-30*86400000).toISOString().slice(0,10), t1To=new Date().toISOString().slice(0,10), t1Draws=[], t1Source="bundle";
+// Tab 2
+let t2Game=S.get("mlp:genGame")||"6/49", t2Combos=S.get("mlp:combos")||[], t2Stats=S.get("mlp:stats")||null, t2Source=null;
+// Tab 3
+let t3Step=0, t3File=null, t3Preview=null, t3Bets=[], t3Game="6/49", t3Date="", t3Result=null, t3History=S.get("mlp:history")||[];
+// Tab 4 — static
+
+// ══════════════════════════════════════════════════════════════
+// ROUTER
+// ══════════════════════════════════════════════════════════════
+function switchTab(n) {
+  currentTab=n;
+  document.querySelectorAll(".nav-btn").forEach((b,i)=>b.classList.toggle("active",i===n));
+  render();
+}
+
+function render() {
+  const c=document.getElementById("content");
+  if(currentTab===0) c.innerHTML=renderResults();
+  else if(currentTab===1) c.innerHTML=renderGenerator();
+  else if(currentTab===2) c.innerHTML=renderChecker();
+  else c.innerHTML=renderSchedule();
+  attachEvents();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB 1 — RESULTS
+// ══════════════════════════════════════════════════════════════
+function renderResults() {
+  const src = t1Source==="api" ? "🟢 Live from Render API" : "🔵 Offline bundle (Feb–May 2026)";
+  const filterBtns = GAMES.map(g=>`<button class="fbtn${t1Game===g?" active":""}" data-fg="${g}" style="${t1Game===g&&g!=="All"?`background:${GAME_COLORS[g]};border-color:${GAME_COLORS[g]};color:#0a1a0f`:""}">${g}</button>`).join("");
+  const cards = t1Draws.length===0
+    ? `<div class="empty"><span class="empty-icon">🎱</span>No draws found.</div>`
+    : t1Draws.map((d,i)=>{
+        const c=d.combination.slice().sort((a,b)=>a-b);
+        const col=GAME_COLORS[d.game]||"#34d367";
+        return `<div class="card" style="animation-delay:${Math.min(i,8)*28}ms">
+          <div class="card-head">
+            <span class="pill" style="color:${col};border-color:${col}">${d.game}</span>
+            <span style="font-family:var(--fn);font-size:10px;color:var(--muted)">${GAME_NAMES[d.game]}</span>
+            <span style="font-family:var(--fn);font-size:10px;color:var(--muted);margin-left:auto">${fmtDate(d.draw_date)}</span>
+          </div>
+          <div class="balls">${c.map(n=>`<div class="ball">${String(n).padStart(2,"0")}</div>`).join("")}</div>
+          <div class="card-foot">
+            <span style="font-family:var(--fn);font-size:12px;color:var(--amber)">${fmtPeso(d.jackpot)}</span>
+            <span style="font-family:var(--fn);font-size:11px;color:var(--muted)">${d.winners===0?"No winner":`${d.winners} winner${d.winners>1?"s":""}`}</span>
+          </div>
+        </div>`;
+      }).join("");
+  return `
+    <div style="font-family:var(--fd);font-size:28px;color:var(--green);letter-spacing:1px;margin-bottom:2px;text-shadow:0 0 20px rgba(52,211,103,0.3)">DRAW RESULTS</div>
+    <div style="font-family:var(--fn);font-size:9px;color:var(--muted);margin-bottom:14px">PCSO 6-BALL GAMES</div>
+    <div class="refresh-row">
+      <span class="last-upd">${src}</span>
+      <button class="btn sec sm" id="refresh-btn" style="width:auto;padding:6px 14px">↻ Refresh</button>
+    </div>
+    <div class="filters">${filterBtns}</div>
+    <div class="date-row">
+      <span class="dlabel">From</span>
+      <input type="date" class="dinput" id="from-d" value="${t1From}" max="${t1To}"/>
+      <span class="dlabel">To</span>
+      <input type="date" class="dinput" id="to-d" value="${t1To}" min="${t1From}" max="${new Date().toISOString().slice(0,10)}"/>
+      <button class="fbtn" id="reset-d">Reset</button>
+    </div>
+    <div class="slabel">${t1Draws.length} draws found</div>
+    ${cards}`;
+}
+
+async function loadDraws() {
+  try {
+    if(apiLive) {
+      const p=new URLSearchParams({from:t1From,to:t1To,limit:"200"});
+      if(t1Game!=="All") p.set("game",t1Game);
+      const d=await apiFetch("/api/draws?"+p);
+      t1Draws=d.draws||[]; t1Source="api";
+    } else throw new Error("off");
+  } catch {
+    let d=BUNDLE.filter(r=>(t1Game==="All"||r.game===t1Game)&&r.draw_date>=t1From&&r.draw_date<=t1To);
+    d.sort((a,b)=>b.draw_date.localeCompare(a.draw_date));
+    t1Draws=d; t1Source="bundle";
+  }
+  if(currentTab===0) render();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB 2 — GENERATOR
+// ══════════════════════════════════════════════════════════════
+function renderGenerator() {
+  const srcBanner = t2Source==="api"
+    ? `<div class="banner success">🟢 Generated from live API data.</div>`
+    : t2Source==="bundle"
+    ? `<div class="banner info">📦 Generated from offline bundle (${BUNDLE.filter(d=>d.game===t2Game).length} draws for ${t2Game}).</div>`
+    : "";
+  const selOpts = GAMES.slice(1).map(g=>`<option value="${g}"${t2Game===g?" selected":""}>${GAME_NAMES[g]}</option>`).join("");
+  const statsHtml = t2Stats ? `
+    <div class="stats">
+      <div class="stat"><div class="stat-v">${t2Stats.historySize}</div><div class="stat-l">Draws</div></div>
+      <div class="stat"><div class="stat-v">${t2Stats.avgSum}</div><div class="stat-l">Avg Sum</div></div>
+      <div class="stat"><div class="stat-v">${t2Stats.hotNumbers?.length||0}</div><div class="stat-l">Hot Nums</div></div>
+    </div>` : "";
+  const comboCards = t2Combos.length===0 ? `<div class="empty"><span class="empty-icon">🎲</span>Select a game and press Generate.</div>`
+    : t2Combos.map((c,i)=>{
+        const hot=t2Stats?.hotNumbers||[], cold=t2Stats?.coldNumbers||[];
+        const balls=c.numbers.map(n=>`<div class="ball${hot.includes(n)?" hot":cold.includes(n)?" cold":""}">${String(n).padStart(2,"0")}</div>`).join("");
+        return `<div class="card" style="animation-delay:${i*55}ms">
+          <div class="combo-hd">COMBINATION #${i+1}</div>
+          <div class="balls">${balls}</div>
+          <div class="chips">
+            <span class="chip">🟢 ${c.hotCount} Hot</span>
+            <span class="chip">🔵 ${c.coldCount} Cold</span>
+            <span class="chip">${c.oddCount} Odd / ${c.evenCount} Even</span>
+            <span class="chip">Sum ${c.sum}</span>
+          </div>
+        </div>`;
+      }).join("");
+  return `
+    <div style="font-family:var(--fd);font-size:28px;color:var(--green);letter-spacing:1px;margin-bottom:2px;text-shadow:0 0 20px rgba(52,211,103,0.3)">COMBO GENERATOR</div>
+    <div style="font-family:var(--fn);font-size:9px;color:var(--muted);margin-bottom:14px">PATTERN ANALYSIS ENGINE</div>
+    ${srcBanner}
+    <select class="sel" id="gen-game">${selOpts}</select>
+    <button class="btn" id="gen-btn" style="margin-bottom:14px">⚡ GENERATE 5 COMBINATIONS</button>
+    ${statsHtml}
+    <div class="slabel">Results</div>
+    ${comboCards}`;
+}
+
+async function runGenerate() {
+  const btn=document.getElementById("gen-btn");
+  if(btn){btn.disabled=true;btn.innerHTML='<div class="spin"></div> Analyzing…';}
+  try {
+    if(apiLive){
+      const d=await apiFetch("/api/generate?game="+encodeURIComponent(t2Game));
+      t2Combos=d.combos||[]; t2Stats=d.stats||null; t2Source="api";
+    } else throw new Error("off");
+  } catch {
+    await new Promise(r=>setTimeout(r,600));
+    const res=generateOffline(t2Game);
+    t2Combos=res.combos; t2Stats=res.stats; t2Source="bundle";
+  }
+  S.set("mlp:combos",t2Combos); S.set("mlp:stats",t2Stats);
+  render();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB 3 — TICKET CHECKER
+// ══════════════════════════════════════════════════════════════
+function renderChecker() {
+  const stepsHtml = ["Upload","Confirm","Result"].map((s,i)=>`
+    <div class="step${t3Step===i?" act":t3Step>i?" done":""}">
+      <div class="step-dot">${t3Step>i?"✓":i+1}</div>${s}
+    </div>`).join("");
+
+  let body="";
+  if(t3Step===0){
+    body=`
+      <div class="upload-zone" id="upload-zone">
+        ${t3Preview?`<img src="${t3Preview}" style="max-width:100%;border-radius:8px;max-height:220px;object-fit:contain"/>`
+        :`<div style="font-size:36px;margin-bottom:8px">🎫</div>
+          <div style="font-size:13px;color:var(--muted)">Tap to upload ticket photo</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--fn)">Claude Vision will read it</div>`}
+      </div>
+      <input type="file" id="file-in" accept="image/*" style="display:none"/>
+      ${t3File?`<button class="btn" id="analyze-btn">📷 READ TICKET WITH AI</button>`:""}
+      <div class="div"></div>
+      <button class="btn sec" id="manual-btn">Enter manually</button>`;
+  } else if(t3Step===1){
+    const selOpts=GAMES.slice(1).map(g=>`<option value="${g}"${t3Game===g?" selected":""}>${GAME_NAMES[g]}</option>`).join("");
+    const betRows=t3Bets.map((bet,bi)=>`
+      <div style="margin-bottom:10px">
+        <div style="font-family:var(--fn);font-size:9px;color:var(--muted);margin-bottom:4px">BET ${bi+1}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+          ${bet.map((n,ni)=>`<input class="ni" type="number" min="1" data-bi="${bi}" data-ni="${ni}" value="${n||""}"/>`).join("")}
+          ${t3Bets.length>1?`<button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px" data-del="${bi}">✕</button>`:""}
+        </div>
+      </div>`).join("");
+    body=`
+      <div class="slabel">Ticket Details</div>
+      <select class="sel" id="chk-game">${selOpts}</select>
+      <div class="date-row">
+        <span class="dlabel">Draw Date</span>
+        <input type="date" class="dinput" id="chk-date" value="${t3Date}"/>
+        <span style="font-family:var(--fn);font-size:9px;color:var(--muted)">(optional)</span>
+      </div>
+      <div class="slabel">Bets — edit if misread</div>
+      ${betRows}
+      <button class="btn sec" id="add-bet-btn" style="margin-bottom:10px">+ Add Bet</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn sec" id="back-btn" style="flex:1">Back</button>
+        <button class="btn" id="check-btn" style="flex:2">CHECK RESULTS</button>
+      </div>`;
+  } else if(t3Step===2&&t3Result){
+    const r=t3Result;
+    const wBalls=r.winning.map(n=>`<div class="ball win">${String(n).padStart(2,"0")}</div>`).join("");
+    const TIER_COL={Jackpot:"#fbbf24","2nd Prize":"#f97316","3rd Prize":"#60a5fa",Consolation:"#a78bfa","No Prize":"#4a7a5a"};
+    const betCards=r.results.map((res,i)=>{
+      const ms=new Set(res.matched);
+      const tc=TIER_COL[res.prizeTier]||"#4a7a5a";
+      return `<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-family:var(--fn);font-size:10px;color:var(--muted)">Bet ${i+1}</span>
+          <span style="font-family:var(--fn);font-size:10px;color:${tc};border:1px solid ${tc};padding:1px 8px;border-radius:20px">${res.prizeTier} · ${res.matchCount}/6</span>
+        </div>
+        <div class="balls">${res.bet.map(n=>`<div class="ball${ms.has(n)?" match":""}">${String(n).padStart(2,"0")}</div>`).join("")}</div>
+      </div>`;
+    }).join("");
+    body=`
+      <div class="card">
+        <div class="card-head">
+          <span class="pill" style="color:${GAME_COLORS[r.game]};border-color:${GAME_COLORS[r.game]}">${r.game}</span>
+          <span style="font-family:var(--fn);font-size:10px;color:var(--muted);margin-left:auto">${fmtDate(r.drawDate)}</span>
+        </div>
+        <div class="slabel" style="margin:6px 0 4px">Winning Combination</div>
+        <div class="balls">${wBalls}</div>
+        <div class="card-foot">
+          <span style="font-family:var(--fn);font-size:12px;color:var(--amber)">${fmtPeso(r.jackpot)}</span>
+          <span style="font-family:var(--fn);font-size:10px;color:var(--muted)">${r.winners===0?"No winner":`${r.winners} winner${r.winners>1?"s":""}`}</span>
+        </div>
+      </div>
+      <div class="slabel">Your Bets</div>
+      ${betCards}
+      <div class="stats" style="margin-top:12px">
+        <div class="stat"><div class="stat-v">${r.results.length}</div><div class="stat-l">Bets</div></div>
+        <div class="stat"><div class="stat-v">${r.bestMatch}</div><div class="stat-l">Best Match</div></div>
+        <div class="stat"><div class="stat-v">${r.results.filter(x=>x.matchCount>=3).length}</div><div class="stat-l">Prize Hits</div></div>
+      </div>
+      <button class="btn" id="again-btn">Check Another Ticket</button>`;
+  }
+
+  const histHtml = t3History.length===0 ? "" : `
+    <div class="div"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span class="slabel" style="margin:0">Recent Checks</span>
+      <button style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--fn)" id="clear-hist">Clear</button>
+    </div>
+    <div class="card" style="padding:4px 14px">
+      ${t3History.map(h=>`
+        <div class="hist-item">
+          <div>
+            <span class="pill" style="color:${GAME_COLORS[h.game]||"#34d367"};border-color:${GAME_COLORS[h.game]||"#34d367"};margin-right:6px">${h.game}</span>
+            <span style="color:var(--muted)">${fmtDate(h.date)}</span>
+          </div>
+          <div style="text-align:right;color:var(--muted)">${h.betsCount} bet${h.betsCount>1?"s":""} · best ${h.bestMatch}/6</div>
+        </div>`).join("")}
+    </div>`;
+
+  return `
+    <div style="font-family:var(--fd);font-size:28px;color:var(--green);letter-spacing:1px;margin-bottom:2px;text-shadow:0 0 20px rgba(52,211,103,0.3)">TICKET CHECKER</div>
+    <div style="font-family:var(--fn);font-size:9px;color:var(--muted);margin-bottom:14px">AI VISION + OFFLINE MATCH</div>
+    <div class="steps">${stepsHtml}</div>
+    ${body}
+    ${histHtml}`;
+}
+
+async function analyzeTicket() {
+  const btn=document.getElementById("analyze-btn");
+  if(btn){btn.disabled=true;btn.innerHTML='<div class="spin"></div> Reading…';}
+  try {
+    const b64=t3Preview.split(",")[1];
+    const mt=t3File.type||"image/jpeg";
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:[
+        {type:"image",source:{type:"base64",media_type:mt,data:b64}},
+        {type:"text",text:`Philippine PCSO lotto ticket. Extract game type (6/49 etc), draw date (YYYY-MM-DD or empty), all 6-number bets. Reply ONLY valid JSON no markdown: {"game":"6/49","draw_date":"2026-05-21","bets":[[1,2,3,4,5,6]]}`}
+      ]}]})
+    });
+    const data=await resp.json();
+    const text=data.content?.find(b=>b.type==="text")?.text||"";
+    const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
+    t3Game=parsed.game||"6/49"; t3Date=parsed.draw_date||""; t3Bets=(parsed.bets||[]).map(b=>[...b]);
+  } catch(e) {
+    t3Game="6/49"; t3Date=""; t3Bets=[[0,0,0,0,0,0]];
+  }
+  t3Step=1; render();
+}
+
+async function checkTicket() {
+  const btn=document.getElementById("check-btn");
+  if(btn){btn.disabled=true;btn.innerHTML='<div class="spin"></div> Checking…';}
+  const clean=t3Bets.map(b=>b.map(Number).filter(n=>n>0));
+  if(clean.some(b=>b.length!==6)){
+    alert("Each bet must have exactly 6 numbers.");
+    render(); return;
+  }
+  try {
+    let res;
+    if(apiLive){
+      res=await apiFetch("/api/check-ticket",{method:"POST",body:JSON.stringify({game:t3Game,draw_date:t3Date||undefined,bets:clean})});
+    } else {
+      const gd=BUNDLE.filter(d=>d.game===t3Game).sort((a,b)=>b.draw_date.localeCompare(a.draw_date));
+      const lat=gd[0]; if(!lat) throw new Error("No data for "+t3Game);
+      const winning=[...lat.combination].sort((a,b)=>a-b);
+      const ws=new Set(winning);
+      res={game:t3Game,drawDate:lat.draw_date,winning,jackpot:lat.jackpot,winners:lat.winners,
+        results:clean.map(bet=>{const m=bet.filter(n=>ws.has(n));const mc=m.length;
+          return{bet,matched:m,matchCount:mc,prizeTier:mc===6?"Jackpot":mc===5?"2nd Prize":mc===4?"3rd Prize":mc===3?"Consolation":"No Prize"};}),bestMatch:0};
+      res.bestMatch=Math.max(...res.results.map(r=>r.matchCount));
+    }
+    t3Result=res;
+    const entry={id:Date.now(),game:t3Game,date:res.drawDate,betsCount:t3Bets.length,bestMatch:res.bestMatch};
+    t3History=[entry,...t3History].slice(0,10);
+    S.set("mlp:history",t3History);
+    t3Step=2;
+  } catch(e) { alert("Error: "+e.message); }
+  render();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB 4 — SCHEDULE
+// ══════════════════════════════════════════════════════════════
+function renderSchedule() {
+  const todayDow=new Date().getDay();
+  const rows=SCHEDULE.map(s=>{
+    const dayChips=DAY_NAMES.map((d,i)=>{
+      const active=s.days.includes(i);
+      const isToday=i===todayDow&&active;
+      if(!active) return `<span style="font-family:var(--fn);font-size:9px;padding:2px 6px;border-radius:20px;color:var(--bg4)">${d}</span>`;
+      return `<span class="day-chip${isToday?" today":""}" style="${!isToday?`color:${s.color};border-color:${s.color}`:""}">${d}</span>`;
+    }).join("");
+    return `<tr>
+      <td>
+        <div class="game-name" style="color:${s.color}">${s.game}</div>
+        <div class="game-sub">${s.name}</div>
+        <div class="game-sub" style="margin-top:2px">Pool: ${s.pool}</div>
+      </td>
+      <td>
+        <div class="draw-days">${dayChips}</div>
+        <div class="draw-time" style="margin-top:5px">⏰ ${s.time}</div>
+      </td>
+      <td>
+        <div class="jackpot-amt">${s.startPot}</div>
+        <div style="font-family:var(--fn);font-size:8px;color:var(--muted);margin-top:2px">START PRIZE</div>
+      </td>
+    </tr>`;
+  }).join("");
+
+  const nextDraws = SCHEDULE.flatMap(s=>{
+    const today=new Date(); today.setHours(0,0,0,0);
+    for(let i=0;i<7;i++){
+      const d=new Date(today); d.setDate(d.getDate()+i);
+      if(s.days.includes(d.getDay())){
+        return [{game:s.game,color:s.color,date:d,daysAway:i}];
+      }
+    }
+    return [];
+  }).sort((a,b)=>a.date-b.date).slice(0,5);
+
+  const nextCards=nextDraws.map(n=>{
+    const label=n.daysAway===0?"TODAY":n.daysAway===1?"TOMORROW":DAY_NAMES[n.date.getDay()].toUpperCase();
+    const dateStr=n.date.toLocaleDateString("en-PH",{month:"short",day:"numeric"});
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="pill" style="color:${n.color};border-color:${n.color}">${n.game}</span>
+        <span style="font-family:var(--fb);font-size:12px">${GAME_NAMES[n.game]}</span>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--fn);font-size:10px;color:${n.daysAway===0?"var(--green)":"var(--text)"};font-weight:700">${label}</div>
+        <div style="font-family:var(--fn);font-size:9px;color:var(--muted)">${dateStr} · 9PM</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `
+    <div style="font-family:var(--fd);font-size:28px;color:var(--green);letter-spacing:1px;margin-bottom:2px;text-shadow:0 0 20px rgba(52,211,103,0.3)">DRAW SCHEDULE</div>
+    <div style="font-family:var(--fn);font-size:9px;color:var(--muted);margin-bottom:14px">PCSO OFFICIAL DRAW DAYS</div>
+
+    <div class="slabel">Upcoming Draws</div>
+    <div class="card" style="padding:4px 14px;margin-bottom:14px">${nextCards}</div>
+
+    <div class="slabel">All Games Schedule</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="sched-table">
+        <thead><tr><th>Game</th><th>Draw Days</th><th>Jackpot</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <div class="slabel" style="margin-bottom:8px">Notes</div>
+      <div style="font-family:var(--fn);font-size:10px;color:var(--muted);line-height:1.8">
+        🕘 All draws at <strong style="color:var(--text)">9:00 PM Philippine Time</strong><br/>
+        📺 Live on <strong style="color:var(--text)">PTV (Channel 4)</strong> and PCSO Livestream<br/>
+        🎟️ Ticket sales cut off at <strong style="color:var(--text)">8:00 PM</strong> on draw days<br/>
+        📍 Draws held at <strong style="color:var(--text)">PCSO Main Office, Mandaluyong City</strong>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// EVENT DELEGATION
+// ══════════════════════════════════════════════════════════════
+function attachEvents() {
+  const c=document.getElementById("content");
+
+  // Tab 1
+  c.querySelectorAll("[data-fg]").forEach(b=>b.addEventListener("click",()=>{t1Game=b.dataset.fg;loadDraws();}));
+  const fromD=c.querySelector("#from-d"); if(fromD) fromD.addEventListener("change",e=>{t1From=e.target.value;loadDraws();});
+  const toD=c.querySelector("#to-d");   if(toD)   toD.addEventListener("change",e=>{t1To=e.target.value;loadDraws();});
+  const resetD=c.querySelector("#reset-d"); if(resetD) resetD.addEventListener("click",()=>{
+    t1From=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+    t1To=new Date().toISOString().slice(0,10); t1Game="All"; loadDraws();
+  });
+  const refBtn=c.querySelector("#refresh-btn"); if(refBtn) refBtn.addEventListener("click",async()=>{
+    refBtn.disabled=true; refBtn.innerHTML='<div class="spin dark"></div>';
+    await checkApi();
+    await loadDraws();
+    refBtn.disabled=false; refBtn.textContent="↻ Refresh";
+  });
+
+  // Tab 2
+  const gg=c.querySelector("#gen-game"); if(gg) gg.addEventListener("change",e=>{t2Game=e.target.value;S.set("mlp:genGame",t2Game);});
+  const gb=c.querySelector("#gen-btn");  if(gb) gb.addEventListener("click",runGenerate);
+
+  // Tab 3 — Step 0
+  const uz=c.querySelector("#upload-zone"); const fi=c.querySelector("#file-in");
+  if(uz&&fi){ uz.addEventListener("click",()=>fi.click()); fi.addEventListener("change",e=>{ const f=e.target.files[0]; if(!f)return; t3File=f; const r=new FileReader(); r.onload=ev=>{t3Preview=ev.target.result;render();}; r.readAsDataURL(f); }); }
+  const ab=c.querySelector("#analyze-btn"); if(ab) ab.addEventListener("click",analyzeTicket);
+  const mb=c.querySelector("#manual-btn"); if(mb) mb.addEventListener("click",()=>{t3Game="6/49";t3Date="";t3Bets=[[0,0,0,0,0,0]];t3Step=1;render();});
+
+  // Tab 3 — Step 1
+  const cg=c.querySelector("#chk-game"); if(cg) cg.addEventListener("change",e=>t3Game=e.target.value);
+  const cd=c.querySelector("#chk-date"); if(cd) cd.addEventListener("change",e=>t3Date=e.target.value);
+  c.querySelectorAll(".ni").forEach(i=>i.addEventListener("change",e=>{
+    const bi=+e.target.dataset.bi, ni=+e.target.dataset.ni;
+    t3Bets[bi][ni]=parseInt(e.target.value)||0;
+  }));
+  c.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",e=>{
+    t3Bets.splice(+e.target.dataset.del,1); render();
+  }));
+  const addB=c.querySelector("#add-bet-btn"); if(addB) addB.addEventListener("click",()=>{t3Bets.push([0,0,0,0,0,0]);render();});
+  const backB=c.querySelector("#back-btn"); if(backB) backB.addEventListener("click",()=>{t3Step=0;render();});
+  const chkB=c.querySelector("#check-btn"); if(chkB) chkB.addEventListener("click",checkTicket);
+
+  // Tab 3 — Step 2
+  const ag=c.querySelector("#again-btn"); if(ag) ag.addEventListener("click",()=>{t3Step=0;t3File=null;t3Preview=null;t3Bets=[];t3Result=null;render();});
+  const ch=c.querySelector("#clear-hist"); if(ch) ch.addEventListener("click",()=>{t3History=[];S.del("mlp:history");render();});
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+(async()=>{
+  await checkApi();
+  await loadDraws();
+  render();
+})();
+</script>
+</body>
+</html>
